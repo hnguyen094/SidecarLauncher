@@ -71,9 +71,9 @@ if (cmd == .Connect || cmd == .Disconnect) {
         printHelp()
         exit(1)
     }
-    
+
     targetDeviceName = CommandLine.arguments[2].lowercased()
-    
+
     if (CommandLine.arguments.count > 3) {
         let optionArg = CommandLine.arguments[3].lowercased()
         guard let validOption = Option(rawValue: optionArg) else {
@@ -110,10 +110,10 @@ if (devices.isEmpty) {
 
 if (cmd == .Connect || cmd == .Disconnect) {
     let targetDevice = devices.first(where: {
-        let name = $0.perform(Selector(("name")))?.takeUnretainedValue() as! String
+        let name = deviceToName(device: $0)
         return name.lowercased() == targetDeviceName
     })
-    
+
     guard let targetDevice = targetDevice else {
         print("""
               \(targetDeviceName) is not in the list of available devices.
@@ -122,13 +122,13 @@ if (cmd == .Connect || cmd == .Disconnect) {
               """)
         exit(3)
     }
-    
+
     let dispatchGroup = DispatchGroup()
     let closure: @convention(block) (_ e: NSError?) -> Void = { e in
         defer {
             dispatchGroup.leave()
         }
-        
+
         if let e = e {
             print(e)
             exit(4)
@@ -142,13 +142,13 @@ if (cmd == .Connect || cmd == .Disconnect) {
             guard let cSidecarDisplayConfig = NSClassFromString("SidecarDisplayConfig") as? NSObject.Type else {
                 fatalError("SidecarDisplayConfig class not found")
             }
-            
+
             let deviceConfig = cSidecarDisplayConfig.init()
             let setTransportSelector = Selector(("setTransport:"))
             let setTransportIMP = deviceConfig.method(for: setTransportSelector)
             let setTransport = unsafeBitCast(setTransportIMP, to:(@convention(c)(Any?, Selector, Int64)->Void).self)
             setTransport(deviceConfig, setTransportSelector, 2)
-            
+
             let connectSelector = Selector(("connectToDevice:withConfig:completion:"))
             let connectIMP = manager.method(for: connectSelector)
             let connect = unsafeBitCast(connectIMP,to:(@convention(c)(Any?,Selector,Any?,Any?,Any?)->Void).self)
@@ -161,10 +161,18 @@ if (cmd == .Connect || cmd == .Disconnect) {
         _ = manager.perform(Selector(("disconnectFromDevice:completion:")), with: targetDevice, with: closure)
     }
     dispatchGroup.wait()
-    
+
 } else {
-    let deviceNames = devices.map{$0.perform(Selector(("name")))?.takeUnretainedValue() as! String}
+    let deviceNames = devices.map(deviceToName)
     for deviceName in deviceNames {
         print(deviceName)
     }
+}
+
+func deviceToName(device: NSObject) -> String {
+    let name = device.perform(Selector(("name")))?.takeUnretainedValue() as! String
+//    let deviceTypeID = device.perform(Selector(("deviceTypeIdentifier")))?.takeUnretainedValue() as! String // com.apple.ipad-pro-11-2nd-1
+//    let model = device.perform(Selector(("model")))?.takeUnretainedValue() as! String // iPad8,10
+    let deviceType = device.perform(Selector(("localizedDeviceType")))?.takeUnretainedValue() as! String // iPad
+    return "\(name) //  \(deviceType)"
 }
