@@ -174,5 +174,11 @@ func deviceToName(device: NSObject) -> String {
 //    let deviceTypeID = device.perform(Selector(("deviceTypeIdentifier")))?.takeUnretainedValue() as! String // com.apple.ipad-pro-11-2nd-1
 //    let model = device.perform(Selector(("model")))?.takeUnretainedValue() as! String // iPad8,10
     let deviceType = device.perform(Selector(("localizedDeviceType")))?.takeUnretainedValue() as! String // iPad
-    return "\(name) //  \(deviceType)"
+
+    let deviceTypeSplit = deviceType.split(separator: " ")
+    let stylizedDeviceType = switch deviceTypeSplit[0].lowercased() == "apple" {
+    case true: String(deviceTypeSplit[1...].joined(separator: " "))
+    case false: deviceType
+    }
+    return "\(name) //  \(stylizedDeviceType)"
 }
